@@ -1,2 +1,21 @@
-<h1>{{ .Title }}</h1>
-<p>{{ .Body }}</p>
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Shittey Webshite</title>
+    <script
+  src="https://code.jquery.com/jquery-3.3.1.js"
+  integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60="
+  crossorigin="anonymous"></script>
+    <script type="text/javascript">
+      $(() => {
+        const ws = new WebSocket("ws://" + document.location.host + "/ws");
+        $('#btn').click(() => {
+          ws.send("BLARGH")
+        })
+      })
+    </script>
+  </head>
+  <body>
+    <button id="btn">Send "BLARGH"</button>
+  </body>
+</html>
