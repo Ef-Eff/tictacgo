@@ -12,6 +12,9 @@
         $('#btn').click(() => {
           ws.send("BLARGH")
         })
+        ws.onmessage = function(event) {
+          console.log(event.data)
+        }
       })
     </script>
   </head>

@@ -27,6 +27,7 @@ func newLobby() *Lobby {
 	return &Lobby{
 		match: make([]*User, 2),
 		connect: make(chan *User),
+		broadcast: make(chan []byte),
 	}
 }
 
@@ -34,6 +35,7 @@ type Lobby struct {
 	// Will only have a single match for now, which consists of two users
 	match []*User
 	connect chan *User
+	broadcast chan []byte
 }
 
 func (l *Lobby) addUser(u *User) {
@@ -46,6 +48,14 @@ func (l *Lobby) run() {
 		select {
 		case user := <-l.connect:
 			l.match = append(l.match, user)
+		case <- l.broadcast:
+			for _, user := range l.match {
+				err := user.conn.WriteMessage(2, []byte("Whaaaat!"))
+				if err != nil {
+					user.conn.Close()
+					log.Fatal("Broadcast:", err)
+				}
+			}
 		}
 	}
 }
@@ -73,9 +83,11 @@ func Websockets(l *Lobby, w http.ResponseWriter, r *http.Request) {
 	user := &User{conn, make([]string, 0), l}
 	l.addUser(user)
 	log.Println("User Connected")
+
 	go func(user *User) {
 		for {
 			_, msg, _ := user.conn.ReadMessage()
+			l.broadcast <- msg
 			user.data = append(user.data, string(msg))
 			log.Println(user.data)
 		}
