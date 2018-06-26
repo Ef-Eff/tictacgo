@@ -23,6 +23,13 @@ type CLArgs struct {
 	Port *int
 }
 
+type Lobby struct {
+	// Will only have a single match for now, which consists of two users
+	match []*User
+	connect chan *User
+	broadcast chan []byte
+}
+
 func newLobby() *Lobby {
 	return &Lobby{
 		match: make([]*User, 0),
@@ -31,23 +38,12 @@ func newLobby() *Lobby {
 	}
 }
 
-type Lobby struct {
-	// Will only have a single match for now, which consists of two users
-	match []*User
-	connect chan *User
-	broadcast chan []byte
-}
-
-func (l *Lobby) addUser(u *User) {
-	l.connect <- u
-	l.match = append(l.match, u)
-}
-
 func (l *Lobby) run() {
 	for {
 		select {
 		case user := <-l.connect:
 			l.match = append(l.match, user)
+			log.Println("User Connected")
 		case msg := <- l.broadcast:
 			log.Println("Incoming:", string(msg))
 			for _, user := range l.match {
@@ -81,8 +77,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 func Websockets(l *Lobby, w http.ResponseWriter, r *http.Request) {
 	conn, _ := upgrader.Upgrade(w, r, nil)
 	user := &User{conn, make([]string, 0), l}
-	l.addUser(user)
-	log.Println("User Connected")
+	l.connect <- user
 
 	go func(user *User) {
 		for {
