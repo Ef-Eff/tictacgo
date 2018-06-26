@@ -30,24 +30,30 @@ func newGame(l *Lobby) *Game {
 		playerOne: l.match[0],
 		playerTwo: l.match[1],
 		board: make([]Mark, 0),
-		turn: 1,
+		turn: 0,
 	}
 }
 
+type ErrResponse struct {
+	Type string
+	Message string
+}
+
 type Mark struct {
+	Type string
 	Player int
 	Position string
 }
 
-func (g *Game) play(num string) {
-	result := Mark{ g.turn, num }
+func (g *Game) play(user *User) {
+	result := Mark{ "play", g.turn, user.lastMessage() }
 	g.board = append(g.board, result)
 	log.Println(g.board)
 	switch g.turn {
-	case 1:
-		g.turn = 2
-	default:
+	case 0:
 		g.turn = 1
+	default:
+		g.turn = 0
 	}
 }
 
@@ -55,7 +61,7 @@ type Lobby struct {
 	// Will only have a single match for now, which consists of two users
 	match []*User
 	connect chan *User
-	broadcast chan []byte
+	broadcast chan *User
 	game *Game
 }
 
@@ -63,7 +69,7 @@ func newLobby() *Lobby {
 	return &Lobby{
 		match: make([]*User, 0),
 		connect: make(chan *User),
-		broadcast: make(chan []byte),
+		broadcast: make(chan *User),
 	}
 }
 
@@ -77,9 +83,9 @@ func (l *Lobby) run() {
 				log.Println("Match found!")
 				l.game = newGame(l)
 			}
-		case msg := <- l.broadcast:
+		case user := <- l.broadcast:
 			if l.game != nil {
-				l.game.play(string(msg))
+				l.game.play(user)
 				js, _ := json.Marshal(l.game.board)
 				for _, user := range l.match {
 					if err := user.conn.WriteMessage(1, js); err != nil {
@@ -87,9 +93,9 @@ func (l *Lobby) run() {
 					}
 				}
 			} else {
-				log.Println("Incoming:", string(msg))
+				log.Println("Incoming:", user.lastMessage())
 				for _, user := range l.match {
-					err := user.conn.WriteMessage(1, msg)
+					err := user.conn.WriteMessage(1, []byte(user.lastMessage()))
 					if err != nil {
 						log.Fatal("Broadcast:", err)
 					}
@@ -111,6 +117,10 @@ type User struct {
 	lobby *Lobby
 }
 
+func (u User) lastMessage() string {
+	return u.data[len(u.data) - 1]
+}
+
 func ParseCLArgs() CLArgs {
 	port := flag.Int("port", defaultPort, "Set's the port for the server to run on.")
 	flag.IntVar(port, "p", defaultPort, "Set's the port for the server to run on.")
@@ -126,8 +136,13 @@ func Websockets(l *Lobby, w http.ResponseWriter, r *http.Request) {
 	go func(user *User) {
 		for {
 			_, msg, _ := user.conn.ReadMessage()
-			l.broadcast <- msg
+			if l.game != nil && l.match[l.game.turn] != user {
+				jss, _ := json.Marshal(ErrResponse{"error", "Not your turn shithead"})
+				user.conn.WriteMessage(1, jss)
+				continue
+			}
 			user.data = append(user.data, string(msg))
+			l.broadcast <- user
 			log.Println(user.data)
 		}
 	}(user)
