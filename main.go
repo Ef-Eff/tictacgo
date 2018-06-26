@@ -25,7 +25,7 @@ type CLArgs struct {
 
 func newLobby() *Lobby {
 	return &Lobby{
-		match: make([]*User, 2),
+		match: make([]*User, 0),
 		connect: make(chan *User),
 		broadcast: make(chan []byte),
 	}
@@ -48,11 +48,11 @@ func (l *Lobby) run() {
 		select {
 		case user := <-l.connect:
 			l.match = append(l.match, user)
-		case <- l.broadcast:
+		case msg := <- l.broadcast:
+			log.Println("Incoming:", string(msg))
 			for _, user := range l.match {
-				err := user.conn.WriteMessage(2, []byte("Whaaaat!"))
+				err := user.conn.WriteMessage(1, msg)
 				if err != nil {
-					user.conn.Close()
 					log.Fatal("Broadcast:", err)
 				}
 			}
