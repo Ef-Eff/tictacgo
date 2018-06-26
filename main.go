@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"flag"
+	"encoding/json"
 
 	"github.com/gorilla/websocket"
 )
@@ -17,10 +18,37 @@ const (
 	defaultPort = 3000
 )
 
-// This is probably the most useless and shittiest implementation of command line interactivity ever.
-// Im just doing it because it's new to me.
-type CLArgs struct {
-	Port *int
+type Game struct {
+	playerOne *User
+	playerTwo *User
+	board []Mark
+	turn int
+}
+
+func newGame(l *Lobby) *Game {
+	return &Game{
+		playerOne: l.match[0],
+		playerTwo: l.match[1],
+		board: make([]Mark, 0),
+		turn: 1,
+	}
+}
+
+type Mark struct {
+	Player int
+	Position string
+}
+
+func (g *Game) play(num string) {
+	result := Mark{ g.turn, num }
+	g.board = append(g.board, result)
+	log.Println(g.board)
+	switch g.turn {
+	case 1:
+		g.turn = 2
+	default:
+		g.turn = 1
+	}
 }
 
 type Lobby struct {
@@ -28,6 +56,7 @@ type Lobby struct {
 	match []*User
 	connect chan *User
 	broadcast chan []byte
+	game *Game
 }
 
 func newLobby() *Lobby {
@@ -44,16 +73,36 @@ func (l *Lobby) run() {
 		case user := <-l.connect:
 			l.match = append(l.match, user)
 			log.Println("User Connected")
+			if len(l.match) == 2 {
+				log.Println("Match found!")
+				l.game = newGame(l)
+			}
 		case msg := <- l.broadcast:
-			log.Println("Incoming:", string(msg))
-			for _, user := range l.match {
-				err := user.conn.WriteMessage(1, msg)
-				if err != nil {
-					log.Fatal("Broadcast:", err)
+			if l.game != nil {
+				l.game.play(string(msg))
+				js, _ := json.Marshal(l.game.board)
+				for _, user := range l.match {
+					if err := user.conn.WriteMessage(1, js); err != nil {
+						log.Fatal("In Match:", err)
+					}
+				}
+			} else {
+				log.Println("Incoming:", string(msg))
+				for _, user := range l.match {
+					err := user.conn.WriteMessage(1, msg)
+					if err != nil {
+						log.Fatal("Broadcast:", err)
+					}
 				}
 			}
 		}
 	}
+}
+
+// This is probably the most useless and shittiest implementation of command line interactivity ever.
+// Im just doing it because it's new to me.
+type CLArgs struct {
+	Port *int
 }
 
 type User struct {
@@ -67,11 +116,6 @@ func ParseCLArgs() CLArgs {
 	flag.IntVar(port, "p", defaultPort, "Set's the port for the server to run on.")
 	flag.Parse()
 	return CLArgs{Port: port}
-}
-
-// The web page the game is played on
-func Index(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "index.html")
 }
 
 func Websockets(l *Lobby, w http.ResponseWriter, r *http.Request) {
@@ -96,7 +140,10 @@ func main() {
 	lobby := newLobby()
 	go lobby.run()
 
-	http.HandleFunc("/", Index)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "index.html")
+	})
+
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		Websockets(lobby, w, r)
 	})

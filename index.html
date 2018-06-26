@@ -13,7 +13,8 @@
           ws.send("BLARGH")
         })
         ws.onmessage = function(event) {
-          console.log(event.data)
+          const reader = new FileReader();
+          console.log(JSON.parse(event.data))
         }
       })
     </script>
