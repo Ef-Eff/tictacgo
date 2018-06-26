@@ -19,18 +19,45 @@ const (
 )
 
 type Game struct {
-	playerOne *User
-	playerTwo *User
-	board []Mark
+	boardPos map[int]bool 
 	turn int
+	counter int
+	scores map[string]int
 }
 
 func newGame(l *Lobby) *Game {
-	return &Game{
-		playerOne: l.match[0],
-		playerTwo: l.match[1],
-		board: make([]Mark, 0),
+	game := &Game{
+		boardPos: make(map[int]bool),
 		turn: 0,
+		counter: 0,
+		scores: map[string]int{
+			"h1": 0, "h2": 0, "h3": 0,
+			"v1": 0, "v2": 0, "v3": 0,
+			"d1": 0, "d2": 0,
+		},
+	}
+	for i, _ := range game.boardPos {
+		game.boardPos[i] = true
+	}
+	return game
+}
+
+func (g *Game) play(user *User) {
+	mark := user.lastMark()
+	g.boardPos[mark.Position] = false
+	for _, v := range mark.Score {
+		if g.turn == 1 { 
+			g.scores[v]++ 
+		} else { 
+			g.scores[v]--
+		}
+	}
+	g.counter++
+	switch g.turn {
+	case 0:
+		g.turn = 1
+	default:
+		g.turn = 0
 	}
 }
 
@@ -39,22 +66,24 @@ type ErrResponse struct {
 	Message string
 }
 
-type Mark struct {
+type RegularResponse struct {
 	Type string
-	Player int
-	Position string
+	Position int
 }
 
-func (g *Game) play(user *User) {
-	result := Mark{ "play", g.turn, user.lastMessage() }
-	g.board = append(g.board, result)
-	log.Println(g.board)
-	switch g.turn {
-	case 0:
-		g.turn = 1
-	default:
-		g.turn = 0
-	}
+type Mark struct {
+	Score []string `json:"score"`
+	Position int 	 `json:"position:`
+}
+
+type User struct {
+	conn *websocket.Conn
+	data []Mark
+	lobby *Lobby
+}
+
+func (u User) lastMark() Mark {
+	return u.data[len(u.data) - 1]
 }
 
 type Lobby struct {
@@ -84,21 +113,11 @@ func (l *Lobby) run() {
 				l.game = newGame(l)
 			}
 		case user := <- l.broadcast:
-			if l.game != nil {
-				l.game.play(user)
-				js, _ := json.Marshal(l.game.board)
-				for _, user := range l.match {
-					if err := user.conn.WriteMessage(1, js); err != nil {
-						log.Fatal("In Match:", err)
-					}
-				}
-			} else {
-				log.Println("Incoming:", user.lastMessage())
-				for _, user := range l.match {
-					err := user.conn.WriteMessage(1, []byte(user.lastMessage()))
-					if err != nil {
-						log.Fatal("Broadcast:", err)
-					}
+			l.game.play(user)
+			js, _ := json.Marshal(RegularResponse{"golaso", user.lastMark().Position})
+			for _, user := range l.match {
+				if err := user.conn.WriteMessage(1, js); err != nil {
+					log.Fatal("In Match:", err)
 				}
 			}
 		}
@@ -111,16 +130,6 @@ type CLArgs struct {
 	Port *int
 }
 
-type User struct {
-	conn *websocket.Conn
-	data []string
-	lobby *Lobby
-}
-
-func (u User) lastMessage() string {
-	return u.data[len(u.data) - 1]
-}
-
 func ParseCLArgs() CLArgs {
 	port := flag.Int("port", defaultPort, "Set's the port for the server to run on.")
 	flag.IntVar(port, "p", defaultPort, "Set's the port for the server to run on.")
@@ -130,20 +139,27 @@ func ParseCLArgs() CLArgs {
 
 func Websockets(l *Lobby, w http.ResponseWriter, r *http.Request) {
 	conn, _ := upgrader.Upgrade(w, r, nil)
-	user := &User{conn, make([]string, 0), l}
+	user := &User{conn: conn, lobby: l}
 	l.connect <- user
 
 	go func(user *User) {
 		for {
 			_, msg, _ := user.conn.ReadMessage()
-			if l.game != nil && l.match[l.game.turn] != user {
+			if l.match[l.game.turn] != user {
 				jss, _ := json.Marshal(ErrResponse{"error", "Not your turn shithead"})
 				user.conn.WriteMessage(1, jss)
 				continue
 			}
-			user.data = append(user.data, string(msg))
-			l.broadcast <- user
+			var m Mark
+			if err := json.Unmarshal(msg, &m); err != nil {
+				jss, _ := json.Marshal(ErrResponse{"error", "Something went wrong, shithead"})
+				user.conn.WriteMessage(1, jss)
+				log.Fatal(err)
+				continue
+			}
+			user.data = append(user.data, m)
 			log.Println(user.data)
+			l.broadcast <- user
 		}
 	}(user)
 }

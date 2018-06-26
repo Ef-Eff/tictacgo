@@ -2,23 +2,71 @@
 <html>
   <head>
     <title>Shittey Webshite</title>
-    <script
-  src="https://code.jquery.com/jquery-3.3.1.js"
-  integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60="
-  crossorigin="anonymous"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        height: 100%;
+      }
+
+      div#boss {
+        height: 400px;
+        width: 400px;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+
+      div > div {
+        height: 30.33%;
+        width: 30.33%;
+        background-color: orange;
+        display: inline-block;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.3.1.js" integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60=" crossorigin="anonymous"></script>
     <script type="text/javascript">
       $(() => {
         const ws = new WebSocket("ws://" + document.location.host + "/ws");
-        $('#btn').click(() => {
-          ws.send("BLARGH")
+
+        $('div>div').click(function() {
+          const score = $(this).attr('data-score').split(' ');
+          const position = parseInt($(this).attr('data-position'));
+          console.log({position,score})
+          ws.send(JSON.stringify({ position, score }))
         })
+
         ws.onmessage = function(event) {
-          console.log(JSON.parse(event.data))
+          const data = JSON.parse(event.data)
+          if (data.Type === "error") {
+            alert(data.Message)
+          }
+          console.log("incoming", data)
+          $(`div[data-position="${data.Position}"]`).css('background-color', 'grey').off();
         }
       })
     </script>
   </head>
   <body>
-    <button id="btn">Send "BLARGH"</button>
+    <!-- 
+      This retarded piece of shit below is my over-engineered solution to tic tac toe
+      the letter (h, v, d) stand for Horizontal, Vertical, Diagonal.
+      The number stands for the numbered win condition from top to bottom, left to right
+      Basically, if someone lands 3 of a specific letter and number (eg 3 h1's) then they win
+      I wouldn't do this if I could easily do an "slice contains slice" in go but I cant. Or im too shit to figure it out
+      No I don't think this solution is elegant nor do I care about that or your criticism Mr/Ms Fictional Reader 
+    -->
+    <div id="boss">
+      <div data-position="0" data-score="h1 v1 d1"></div> <div data-position="1" data-score="h1 v2"></div> <div data-position="2" data-score="h1 v3 d2"></div>
+
+      <div data-position="3" data-score="h2 v1"></div> <div data-position="4" data-score="h2 v2 d1 d2"></div> <div data-position="5" data-score="h2 v3"></div>
+
+      <div data-position="6" data-score="h3 v1 d2"></div> <div data-position="7" data-score="h3 v2"></div> <div data-position="8" data-score="h3 v3 d1"></div>
+    </div>
   </body>
 </html>
