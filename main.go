@@ -58,10 +58,8 @@ func (user *User) readPlay() {
 
 		var m Mark
 		if err := json.Unmarshal(msg, &m); err != nil {
-			jss, _ := json.Marshal(Message{"error", "Something went wrong, shithead"})
-			user.conn.WriteMessage(1, jss)
+			user.sendMessage(Message{"error", "Something went wrong, shithead"})
 			log.Fatal(err)
-			continue
 		}
 
 		user.data = append(user.data, m)
@@ -115,7 +113,8 @@ func (l *Lobby) run() {
 				// l.endGame()
 				break
 			}
-			l.writeToAll(Message{"mark", user.lastMark().Position})
+			res := map[string]int{"Position": user.lastMark().Position, "PlayerNumber": l.game.turn}
+			l.writeToAll(Message{"mark", res})
 		}
 	}
 }
@@ -142,27 +141,9 @@ func (l *Lobby) newGame() {
 	for i, _ := range game.boardPos {
 		game.boardPos[i] = true
 	}
+	l.writeToAll(Message{Type:"start"})
 	l.game = game
 }
-
-// func (l *Lobby) endGame() {
-// 	log.Println("Match Finished! Player", l.game.turn + 1, "won!")
-// 	l.writeToAll(Message{"winner", l.users[l.game.turn].lastMark().Position})
-// 	poss := make([]int, 0)
-// 	for k, v := range l.game.boardPos {
-// 		if v == true {
-// 			l.game.boardPos[k] = false
-// 			poss = append(poss, k)
-// 		}
-// 	}
-// 	js, _ := json.Marshal(Message{"disable", poss})
-// 	for _, user := range l.users {
-// 		if err := user.conn.WriteMessage(1, js); err != nil {
-// 			log.Fatal("In Match:", err)
-// 		}
-// 	}
-// }
-
 
 func (g *Game) play(user *User) bool {
 	mark := user.lastMark()
@@ -187,6 +168,24 @@ func (g *Game) play(user *User) bool {
 	}
 	return false
 }
+
+// func (l *Lobby) endGame() {
+// 	log.Println("Match Finished! Player", l.game.turn + 1, "won!")
+// 	l.writeToAll(Message{"winner", l.users[l.game.turn].lastMark().Position})
+// 	poss := make([]int, 0)
+// 	for k, v := range l.game.boardPos {
+// 		if v == true {
+// 			l.game.boardPos[k] = false
+// 			poss = append(poss, k)
+// 		}
+// 	}
+// 	js, _ := json.Marshal(Message{"disable", poss})
+// 	for _, user := range l.users {
+// 		if err := user.conn.WriteMessage(1, js); err != nil {
+// 			log.Fatal("In Match:", err)
+// 		}
+// 	}
+// }
 
 // This is probably the most useless and shittiest implementation of command line interactivity ever.
 // Im just doing it because it's new to me.
