@@ -56,7 +56,7 @@ func (g *Game) play(user *User) bool {
 			} 
 		}
 	}
-
+	log.Println(g.scores)
 	g.boardPos[mark.Position] = false
 	switch g.turn {
 	case 0:
@@ -138,13 +138,13 @@ func (l *Lobby) run() {
 			}
 			if len(l.match) == 2 {
 				log.Println("Match found!")
-				newGame(l)
+				l.game = newGame(l)
 			}
 		case user := <- l.broadcast:
 			win := l.game.play(user)
 			if win != false {
 				l.endGame()
-				continue
+				break
 			}
 			l.writeToAll(RegularResponse{"porra", user.lastMark().Position})
 		}
@@ -152,15 +152,16 @@ func (l *Lobby) run() {
 }
 
 func (l *Lobby) endGame() {
+	log.Println("Match Finished! Player", l.game.turn + 1, "won!")
 	l.writeToAll(RegularResponse{"winner", l.match[l.game.turn].lastMark().Position})
-	pos := make([]int, 0)
+	poss := make([]int, 0)
 	for k, v := range l.game.boardPos {
 		if v == true {
 			l.game.boardPos[k] = false
-			pos = append(pos, k)
+			poss = append(poss, k)
 		}
 	}
-	js, _ := json.Marshal(DisableResponse{"disable", pos})
+	js, _ := json.Marshal(DisableResponse{"disable", poss})
 	for _, user := range l.match {
 		if err := user.conn.WriteMessage(1, js); err != nil {
 			log.Fatal("In Match:", err)
@@ -202,7 +203,6 @@ func Websockets(l *Lobby, w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			user.data = append(user.data, m)
-			log.Println(user.data)
 			l.broadcast <- user
 		}
 	}(user)

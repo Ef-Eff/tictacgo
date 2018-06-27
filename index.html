@@ -33,15 +33,32 @@
     <script type="text/javascript">
       $(() => {
         const ws = new WebSocket("ws://" + document.location.host + "/ws");
-
+        const colors = ['red', 'blue']
+        let me;
+        turn = 1;
         $('div>div').click(function() {
           const score = $(this).attr('data-score').split(' ');
           const position = parseInt($(this).attr('data-position'));
           ws.send(JSON.stringify({ position, score }))
         })
+        
+        function decideColor() {
+          if (turn === 1) {
+            turn -= 1
+            return colors[turn]
+          } else {
+            turn++
+            return colors[turn]
+          }
+        }
 
         ws.onmessage = function(event) {
           const data = JSON.parse(event.data)
+          if (!data.Type) {
+            me = data.Player
+            $('#player').css('color', colors[me-1]).text(`Player ${me}`)
+            return
+          }
           if (data.Type === "error") {
             alert(data.Message)
             return
@@ -51,7 +68,7 @@
             })
             return
           } 
-          $(`div[data-position="${data.Position}"]`).css('background-color', 'grey').off();
+          $(`div[data-position="${data.Position}"]`).css('background-color', decideColor()).off();
         }
       })
     </script>
@@ -65,6 +82,7 @@
       I wouldn't do this if I could easily do an "slice contains slice" in go but I cant. Or im too shit to figure it out
       No I don't think this solution is elegant nor do I care about that or your criticism Mr/Ms Fictional Reader 
     -->
+    <h1 id="player"></h1>
     <div id="boss">
       <div data-position="0" data-score="h1 v1 d1"></div> <div data-position="1" data-score="h1 v2"></div> <div data-position="2" data-score="h1 v3 d2"></div>
 
