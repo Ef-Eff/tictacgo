@@ -37,7 +37,6 @@
         $('div>div').click(function() {
           const score = $(this).attr('data-score').split(' ');
           const position = parseInt($(this).attr('data-position'));
-          console.log({position,score})
           ws.send(JSON.stringify({ position, score }))
         })
 
@@ -45,8 +44,13 @@
           const data = JSON.parse(event.data)
           if (data.Type === "error") {
             alert(data.Message)
-          }
-          console.log("incoming", data)
+            return
+          } else if (data.Type === "disable") {
+            data.Positions.forEach((p) => {
+              $(`div[data-position="${p}"]`).off();    
+            })
+            return
+          } 
           $(`div[data-position="${data.Position}"]`).css('background-color', 'grey').off();
         }
       })

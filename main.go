@@ -42,23 +42,29 @@ func newGame(l *Lobby) *Game {
 	return game
 }
 
-func (g *Game) play(user *User) {
+func (g *Game) play(user *User) bool {
 	mark := user.lastMark()
-	g.boardPos[mark.Position] = false
+	g.counter++
 	for _, v := range mark.Score {
 		if g.turn == 1 { 
-			g.scores[v]++ 
+			if g.scores[v]++; g.scores[v] == 3 {
+				return true
+			} 
 		} else { 
-			g.scores[v]--
+			if g.scores[v]--; g.scores[v] == -3 {
+				return true
+			} 
 		}
 	}
-	g.counter++
+
+	g.boardPos[mark.Position] = false
 	switch g.turn {
 	case 0:
 		g.turn = 1
 	default:
 		g.turn = 0
 	}
+	return false
 }
 
 type ErrResponse struct {
@@ -71,9 +77,14 @@ type RegularResponse struct {
 	Position int
 }
 
+type DisableResponse struct {
+	Type string
+	Positions []int
+}
+
 type Mark struct {
 	Score []string `json:"score"`
-	Position int 	 `json:"position:`
+	Position int   `json:"position"`
 }
 
 type User struct {
@@ -102,24 +113,57 @@ func newLobby() *Lobby {
 	}
 }
 
+type Player struct {
+	Player int
+}
+
+func (l *Lobby) writeToAll(r RegularResponse) {
+	js, _ := json.Marshal(r)
+	for _, user := range l.match {
+		if err := user.conn.WriteMessage(1, js); err != nil {
+			log.Fatal("In Match:", err)
+		}
+	}
+}
+
 func (l *Lobby) run() {
 	for {
 		select {
 		case user := <-l.connect:
 			l.match = append(l.match, user)
 			log.Println("User Connected")
+			js, _ :=  json.Marshal(Player{len(l.match)})
+			if err := user.conn.WriteMessage(1, js); err != nil {
+				log.Fatal("????:", err)
+			}
 			if len(l.match) == 2 {
 				log.Println("Match found!")
-				l.game = newGame(l)
+				newGame(l)
 			}
 		case user := <- l.broadcast:
-			l.game.play(user)
-			js, _ := json.Marshal(RegularResponse{"golaso", user.lastMark().Position})
-			for _, user := range l.match {
-				if err := user.conn.WriteMessage(1, js); err != nil {
-					log.Fatal("In Match:", err)
-				}
+			win := l.game.play(user)
+			if win != false {
+				l.endGame()
+				continue
 			}
+			l.writeToAll(RegularResponse{"porra", user.lastMark().Position})
+		}
+	}
+}
+
+func (l *Lobby) endGame() {
+	l.writeToAll(RegularResponse{"winner", l.match[l.game.turn].lastMark().Position})
+	pos := make([]int, 0)
+	for k, v := range l.game.boardPos {
+		if v == true {
+			l.game.boardPos[k] = false
+			pos = append(pos, k)
+		}
+	}
+	js, _ := json.Marshal(DisableResponse{"disable", pos})
+	for _, user := range l.match {
+		if err := user.conn.WriteMessage(1, js); err != nil {
+			log.Fatal("In Match:", err)
 		}
 	}
 }
