@@ -1,0 +1,76 @@
+* {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+}
+
+div#boss {
+  height: 400px;
+  width: 400px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0;
+}
+
+div > div {
+  height: 33.33%;
+  width: 33.33%;
+  display: inline-block;
+}
+
+/* tfw you cba to use scss */
+
+div > div[data-pos="0"] {
+  border-right: 1px solid black;
+  border-bottom: 1px solid black;
+}
+
+div > div[data-pos="1"] {
+  border-left: 1px solid black;
+  border-right: 1px solid black;
+  border-bottom: 1px solid black;
+}
+
+div > div[data-pos="2"] {
+  border-left: 1px solid black;
+  border-bottom: 1px solid black;
+}
+
+div > div[data-pos="3"] {
+  border-top: 1px solid black;
+  border-right: 1px solid black;
+  border-bottom: 1px solid black;
+}
+
+div > div[data-pos="4"] {
+  border-top: 1px solid black;
+  border-left: 1px solid black;
+  border-right: 1px solid black;
+  border-bottom: 1px solid black;
+}
+
+div > div[data-pos="5"] {
+  border-top: 1px solid black;
+  border-left: 1px solid black;
+  border-bottom: 1px solid black;
+}
+
+div > div[data-pos="6"] {
+  border-top: 1px solid black;
+  border-right: 1px solid black;
+}
+
+div > div[data-pos="7"] {
+  border-top: 1px solid black;
+  border-left: 1px solid black;
+  border-right: 1px solid black;
+}
+
+div > div[data-pos="8"] {
+  border-top: 1px solid black;
+  border-left: 1px solid black;
+}

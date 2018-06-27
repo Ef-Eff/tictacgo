@@ -2,76 +2,10 @@
 <html>
   <head>
     <title>Shittey Webshite</title>
-    <style>
-      * {
-        box-sizing: border-box;
-      }
-
-      html {
-        height: 100%;
-      }
-
-      div#boss {
-        height: 400px;
-        width: 400px;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-      }
-
-      div > div {
-        height: 30.33%;
-        width: 30.33%;
-        background-color: orange;
-        display: inline-block;
-        margin: 0;
-        padding: 0;
-      }
-    </style>
+    <link rel="stylesheet" href="./static/css/reset.css">
+    <link rel="stylesheet" href="./static/css/main.css">
     <script src="https://code.jquery.com/jquery-3.3.1.js" integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60=" crossorigin="anonymous"></script>
-    <script type="text/javascript">
-      $(() => {
-        const ws = new WebSocket("ws://" + document.location.host + "/ws");
-        const colors = ['red', 'blue']
-        let me;
-        turn = 1;
-        $('div>div').click(function() {
-          const score = $(this).attr('data-score').split(' ');
-          const position = parseInt($(this).attr('data-position'));
-          ws.send(JSON.stringify({ position, score }))
-        })
-        
-        function decideColor() {
-          if (turn === 1) {
-            turn -= 1
-            return colors[turn]
-          } else {
-            turn++
-            return colors[turn]
-          }
-        }
-
-        ws.onmessage = function(event) {
-          const data = JSON.parse(event.data)
-          if (!data.Type) {
-            me = data.Player
-            $('#player').css('color', colors[me-1]).text(`Player ${me}`)
-            return
-          }
-          if (data.Type === "error") {
-            alert(data.Message)
-            return
-          } else if (data.Type === "disable") {
-            data.Positions.forEach((p) => {
-              $(`div[data-position="${p}"]`).off();    
-            })
-            return
-          } 
-          $(`div[data-position="${data.Position}"]`).css('background-color', decideColor()).off();
-        }
-      })
-    </script>
+    <script src="./static/js/main.js" type="text/javascript"></script>
   </head>
   <body>
     <!-- 
@@ -80,15 +14,15 @@
       The number stands for the numbered win condition from top to bottom, left to right
       Basically, if someone lands 3 of a specific letter and number (eg 3 h1's) then they win
       I wouldn't do this if I could easily do an "slice contains slice" in go but I cant. Or im too shit to figure it out
-      No I don't think this solution is elegant nor do I care about that or your criticism Mr/Ms Fictional Reader 
+      No I don't think this solution is elegant nor do I care about that or your criticism Mr/Ms Fictional Reader
     -->
     <h1 id="player"></h1>
     <div id="boss">
-      <div data-position="0" data-score="h1 v1 d1"></div> <div data-position="1" data-score="h1 v2"></div> <div data-position="2" data-score="h1 v3 d2"></div>
+      <div data-pos="0" data-score="h1 v1 d1"></div> <div data-pos="1" data-score="h1 v2"></div> <div data-pos="2" data-score="h1 v3 d2"></div>
 
-      <div data-position="3" data-score="h2 v1"></div> <div data-position="4" data-score="h2 v2 d1 d2"></div> <div data-position="5" data-score="h2 v3"></div>
+      <div data-pos="3" data-score="h2 v1"></div> <div data-pos="4" data-score="h2 v2 d1 d2"></div> <div data-pos="5" data-score="h2 v3"></div>
 
-      <div data-position="6" data-score="h3 v1 d2"></div> <div data-position="7" data-score="h3 v2"></div> <div data-position="8" data-score="h3 v3 d1"></div>
+      <div data-pos="6" data-score="h3 v1 d2"></div> <div data-pos="7" data-score="h3 v2"></div> <div data-pos="8" data-score="h3 v3 d1"></div>
     </div>
   </body>
 </html>
