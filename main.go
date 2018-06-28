@@ -49,7 +49,12 @@ func (user *User) sendMessage(m Message) {
 // Every message will be the players move on the board, this validates it then broadcasts it
 func (user *User) readPlay() {
 	for {
-		_, msg, _ := user.conn.ReadMessage()
+		_, msg, err := user.conn.ReadMessage()
+		if err != nil {
+			log.Println(err)
+			user.lobby.disconnect <- user
+			continue
+		}
 
 		if user.lobby.users[user.lobby.game.turn] != user {
 			user.sendMessage(Message{"error", "Not your turn, shithead."})
@@ -73,10 +78,11 @@ func (u User) lastMark() Mark {
 
 // The "hub" from the gorilla websocket chat example
 type Lobby struct {
-	users 		[]*User
-	connect 	chan *User
-	broadcast chan *User
-	game 			*Game
+	users 		 []*User
+	connect 	 chan *User
+	disconnect chan *User
+	broadcast  chan *User
+	game 			 *Game
 }
 
 func newLobby() *Lobby {
@@ -114,6 +120,9 @@ func (l *Lobby) run() {
 			}
 			res := map[string]int{"Position": user.lastMark().Position, "PlayerNumber": l.game.turn}
 			l.writeToAll(Message{"mark", res})
+		case <- l.disconnect:
+			l.writeToAll(Message{"error", "Someone dced and im too shit to implement a propper DC protocol, so erm, ur all fired"})
+			l.users = nil
 		}
 	}
 }
@@ -144,6 +153,14 @@ func (l *Lobby) newGame() {
 	l.game = game
 }
 
+func (g *Game) flipTurn() {
+	switch g.turn {
+	case 0:
+		g.turn = 1
+	default:
+		g.turn = 0
+	}
+}
 func (g *Game) play(user *User) string {
 	mark := user.lastMark()
 
@@ -160,15 +177,8 @@ func (g *Game) play(user *User) string {
 			} 
 		}
 	}
-
+	g.flipTurn()
 	g.boardPos[mark.Position] = false
-
-	switch g.turn {
-	case 0:
-		g.turn = 1
-	default:
-		g.turn = 0
-	}
 	return ""
 }
 
@@ -180,8 +190,14 @@ type Win struct {
 
 func (l *Lobby) endGame(user *User, key string) {
 	log.Println("Match Finished! Player", l.game.turn + 1, "won!")
-
-	res := Win{user.lastMark().Position, l.game.turn + 1, key}
+	var turn int
+	switch l.game.turn {
+	case 0:
+		turn = 1
+	default:
+		turn = 0
+	}
+	res := Win{user.lastMark().Position, turn, key}
 	l.writeToAll(Message{"win", res})
 }
 

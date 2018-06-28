@@ -25,15 +25,18 @@ $(() => {
   }
   
   function mark(msg) {
-    console.log(msg)
+    console.log(msg);
     const $boardPos = $(`div>div[data-pos="${msg.Position}"]`);
     $boardPos.off().append(fixYourShit[msg.PlayerNumber].clone());
   }
   
   function win(msg) {
     mark(msg)
-    console.log(msg.PlayerNumber === playerNumber ? "You won!": "Ur shit")
     $("div>div").off();
+    $(`div>div[data-keys*="${msg.Key}"]`).css("background-color", "green");
+    setTimeout(() => {
+      alert(msg.PlayerNumber === playerNumber ? "You won!": "Ur shit")
+    }, 0)
   }
   
   // :thinking: maybe later
