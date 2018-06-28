@@ -28,13 +28,13 @@ type Message struct {
 // This is the only message format the client is sending (for now)
 // I want the array of keys to calculate the score, then the position to disable it
 type Mark struct {
-	Keys []string `json:"keys"`
-	Position int  `json:"position"`
+	Keys 		 []string `json:"keys"`
+	Position int  		`json:"position"`
 }
 
 type User struct {
-	conn *websocket.Conn
-	data []Mark
+	conn  *websocket.Conn
+	data  []Mark
 	lobby *Lobby
 }
 
@@ -73,16 +73,16 @@ func (u User) lastMark() Mark {
 
 // The "hub" from the gorilla websocket chat example
 type Lobby struct {
-	users []*User
-	connect chan *User
+	users 		[]*User
+	connect 	chan *User
 	broadcast chan *User
-	game *Game
+	game 			*Game
 }
 
 func newLobby() *Lobby {
 	return &Lobby{
-		users: make([]*User, 0),
-		connect: make(chan *User),
+		users: 		 make([]*User, 0),
+		connect: 	 make(chan *User),
 		broadcast: make(chan *User),
 	}
 }
@@ -107,10 +107,9 @@ func (l *Lobby) run() {
 				l.newGame()
 			}
 		case user := <- l.broadcast:
-			win := l.game.play(user)
-			if win == true {
-				log.Println("ahoy matey!!!")
-				// l.endGame()
+			key := l.game.play(user)
+			if key != "" {
+				l.endGame(user, key)
 				break
 			}
 			res := map[string]int{"Position": user.lastMark().Position, "PlayerNumber": l.game.turn}
@@ -122,17 +121,17 @@ func (l *Lobby) run() {
 // The Game
 type Game struct {
 	boardPos map[int]bool 
-	turn int
-	counter int
-	scores map[string]int
+	turn 		 int
+	counter  int
+	scores 	 map[string]int
 }
 
 func (l *Lobby) newGame() {
 	game := &Game{
 		boardPos: make(map[int]bool),
-		turn: 0,
-		counter: 0,
-		scores: map[string]int{
+		turn: 		0,
+		counter: 	0,
+		scores: 	map[string]int{
 			"h1": 0, "h2": 0, "h3": 0,
 			"v1": 0, "v2": 0, "v3": 0,
 			"d1": 0, "d2": 0,
@@ -145,47 +144,46 @@ func (l *Lobby) newGame() {
 	l.game = game
 }
 
-func (g *Game) play(user *User) bool {
+func (g *Game) play(user *User) string {
 	mark := user.lastMark()
+
 	g.counter++
+
 	for _, v := range mark.Keys {
 		if g.turn == 1 { 
 			if g.scores[v]++; g.counter > 4 && g.scores[v] == 3 {
-				return true
+				return v
 			} 
 		} else { 
 			if g.scores[v]--; g.counter > 4 && g.scores[v] == -3 {
-				return true
+				return v
 			} 
 		}
 	}
+
 	g.boardPos[mark.Position] = false
+
 	switch g.turn {
 	case 0:
 		g.turn = 1
 	default:
 		g.turn = 0
 	}
-	return false
+	return ""
 }
 
-// func (l *Lobby) endGame() {
-// 	log.Println("Match Finished! Player", l.game.turn + 1, "won!")
-// 	l.writeToAll(Message{"winner", l.users[l.game.turn].lastMark().Position})
-// 	poss := make([]int, 0)
-// 	for k, v := range l.game.boardPos {
-// 		if v == true {
-// 			l.game.boardPos[k] = false
-// 			poss = append(poss, k)
-// 		}
-// 	}
-// 	js, _ := json.Marshal(Message{"disable", poss})
-// 	for _, user := range l.users {
-// 		if err := user.conn.WriteMessage(1, js); err != nil {
-// 			log.Fatal("In Match:", err)
-// 		}
-// 	}
-// }
+type Win struct {
+	Position int
+	PlayerNumber int
+	Key string
+}
+
+func (l *Lobby) endGame(user *User, key string) {
+	log.Println("Match Finished! Player", l.game.turn + 1, "won!")
+
+	res := Win{user.lastMark().Position, l.game.turn + 1, key}
+	l.writeToAll(Message{"win", res})
+}
 
 // This is probably the most useless and shittiest implementation of command line interactivity ever.
 // Im just doing it because it's new to me.

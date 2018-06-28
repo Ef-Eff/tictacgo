@@ -25,13 +25,16 @@ $(() => {
     $boardPos.off().css("background-color", ["blue", "red"][msg.PlayerNumber]);
   }
   
-  function win() {
-  
+  function win(msg) {
+    mark(msg)
+    console.log(msg.PlayerNumber === playerNumber ? "You won!": "Ur shit")
+    $("div>div").off();
   }
   
-  function lose() {
+  // :thinking: maybe later
+  // function lose() {
   
-  }
+  // }
 
   function error(errMessage) {
     alert(errMessage);
@@ -42,7 +45,7 @@ $(() => {
     start,
     mark,
     win,
-    lose,
+    // lose,
     error,
   };
 
