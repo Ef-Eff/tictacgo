@@ -3,6 +3,10 @@ $(() => {
 
   let playerNumber;
 
+  const $circle = $("<span class='nought'></span>");
+  const $cross = $("<span class='cross'><span></span><span></span></span>");
+  const fixYourShit = [$circle, $cross];
+
   function color() {
     return ["red", "blue"][playerNumber - 1];
   }
@@ -17,12 +21,13 @@ $(() => {
   function start() {
     console.log(`Two players have been found and now the match begins! You go ${["1st", "2nd"][playerNumber-1]}`);
     $("div>div").click(sendMark);
+    $("h3#shitTalk").text(["Your turn", "Opponents turn"][playerNumber-1])
   }
   
   function mark(msg) {
     console.log(msg)
     const $boardPos = $(`div>div[data-pos="${msg.Position}"]`);
-    $boardPos.off().css("background-color", ["blue", "red"][msg.PlayerNumber]);
+    $boardPos.off().append(fixYourShit[msg.PlayerNumber].clone());
   }
   
   function win(msg) {
