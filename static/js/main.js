@@ -5,16 +5,22 @@ $(() => {
 
   const $circle = $("<span class='nought'></span>");
   const $cross = $("<span class='cross'><span></span><span></span></span>");
-  const fixYourShit = [$circle, $cross];
 
-  function color() {
-    return ["red", "blue"][playerNumber - 1];
-  }
+  const players = {
+    1: {
+      chip: $circle,
+      color: "red"
+    },
+    2: {
+      chip: $cross,
+      color: "blue"
+    }
+  };
 
   function welcome(number) {
     playerNumber = number;
     console.log(`Welcome! You are now player ${playerNumber}`);
-    $("#player").text(`Player ${playerNumber}`).css("color", color());
+    $("#player").text(`Player ${playerNumber}`).css("color", players[playerNumber].color);
   }
 
   // no fucking idea
@@ -27,7 +33,8 @@ $(() => {
   function mark(msg) {
     console.log(msg);
     const $boardPos = $(`div>div[data-pos="${msg.Position}"]`);
-    $boardPos.off().append(fixYourShit[msg.PlayerNumber].clone());
+    $boardPos.off().append(players[msg.PlayerNumber].chip.clone());
+    $("h3#shitTalk").text(["Opponents turn", "Your turn"][Math.abs(msg.PlayerNumber - playerNumber)])
   }
   
   function win(msg) {

@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"flag"
-	"encoding/json"
 
 	"github.com/gorilla/websocket"
 )
@@ -18,8 +17,16 @@ const (
 	defaultPort = 3000
 )
 
+type Server struct {
+	lobbies []*Lobby
+}
+
+func newServer() *Server {
+	return &Server{make([]*Lobby,0)}
+}
+
 // All messages sent from the server are in this generic format
-// hopefully using interface{} isnt problematic, i dunno ¯-_(ツ)_-¯
+// hopefully using interface{} isnt problematic, i dunno ¯\_(ツ)_/¯
 type Message struct {
 	Type string
 	Data interface{}
@@ -30,175 +37,6 @@ type Message struct {
 type Mark struct {
 	Keys 		 []string `json:"keys"`
 	Position int  		`json:"position"`
-}
-
-type User struct {
-	conn  *websocket.Conn
-	data  []Mark
-	lobby *Lobby
-}
-
-// Simple json marshalling of a generic message
-func (user *User) sendMessage(m Message) {
-	msg, _ := json.Marshal(m)
-	if err := user.conn.WriteMessage(1, msg); err != nil {
-		log.Fatal(err)
-	}
-}
-
-// Every message will be the players move on the board, this validates it then broadcasts it
-func (user *User) readPlay() {
-	for {
-		_, msg, err := user.conn.ReadMessage()
-		if err != nil {
-			log.Println(err)
-			user.lobby.disconnect <- user
-			continue
-		}
-
-		if user.lobby.users[user.lobby.game.turn] != user {
-			user.sendMessage(Message{"error", "Not your turn, shithead."})
-			continue
-		}
-
-		var m Mark
-		if err := json.Unmarshal(msg, &m); err != nil {
-			user.sendMessage(Message{"error", "Something went wrong, shithead"})
-			log.Fatal(err)
-		}
-
-		user.data = append(user.data, m)
-		user.lobby.broadcast <- user
-	}
-}
-
-func (u User) lastMark() Mark {
-	return u.data[len(u.data) - 1]
-}
-
-// The "hub" from the gorilla websocket chat example
-type Lobby struct {
-	users 		 []*User
-	connect 	 chan *User
-	disconnect chan *User
-	broadcast  chan *User
-	game 			 *Game
-}
-
-func newLobby() *Lobby {
-	return &Lobby{
-		users: 		 make([]*User, 0),
-		connect: 	 make(chan *User),
-		broadcast: make(chan *User),
-	}
-}
-
-func (l *Lobby) writeToAll(m Message) {
-	msg, _ := json.Marshal(m)
-	for _, user := range l.users {
-		user.conn.WriteMessage(1, msg)
-	}
-}
-
-func (l *Lobby) run() {
-	for {
-		select {
-		case user := <-l.connect:
-			l.users = append(l.users, user)
-
-			user.sendMessage(Message{"welcome", len(l.users)})
-
-			if len(l.users) == 2 {
-				log.Println("Match found!")
-				l.newGame()
-			}
-		case user := <- l.broadcast:
-			key := l.game.play(user)
-			if key != "" {
-				l.endGame(user, key)
-				break
-			}
-			res := map[string]int{"Position": user.lastMark().Position, "PlayerNumber": l.game.turn}
-			l.writeToAll(Message{"mark", res})
-		case <- l.disconnect:
-			l.writeToAll(Message{"error", "Someone dced and im too shit to implement a propper DC protocol, so erm, ur all fired"})
-			l.users = nil
-		}
-	}
-}
-
-// The Game
-type Game struct {
-	boardPos map[int]bool 
-	turn 		 int
-	counter  int
-	scores 	 map[string]int
-}
-
-func (l *Lobby) newGame() {
-	game := &Game{
-		boardPos: make(map[int]bool),
-		turn: 		0,
-		counter: 	0,
-		scores: 	map[string]int{
-			"h1": 0, "h2": 0, "h3": 0,
-			"v1": 0, "v2": 0, "v3": 0,
-			"d1": 0, "d2": 0,
-		},
-	}
-	for i, _ := range game.boardPos {
-		game.boardPos[i] = true
-	}
-	l.writeToAll(Message{Type:"start"})
-	l.game = game
-}
-
-func (g *Game) flipTurn() {
-	switch g.turn {
-	case 0:
-		g.turn = 1
-	default:
-		g.turn = 0
-	}
-}
-func (g *Game) play(user *User) string {
-	mark := user.lastMark()
-
-	g.counter++
-
-	for _, v := range mark.Keys {
-		if g.turn == 1 { 
-			if g.scores[v]++; g.counter > 4 && g.scores[v] == 3 {
-				return v
-			} 
-		} else { 
-			if g.scores[v]--; g.counter > 4 && g.scores[v] == -3 {
-				return v
-			} 
-		}
-	}
-	g.flipTurn()
-	g.boardPos[mark.Position] = false
-	return ""
-}
-
-type Win struct {
-	Position int
-	PlayerNumber int
-	Key string
-}
-
-func (l *Lobby) endGame(user *User, key string) {
-	log.Println("Match Finished! Player", l.game.turn + 1, "won!")
-	var turn int
-	switch l.game.turn {
-	case 0:
-		turn = 1
-	default:
-		turn = 0
-	}
-	res := Win{user.lastMark().Position, turn, key}
-	l.writeToAll(Message{"win", res})
 }
 
 // This is probably the most useless and shittiest implementation of command line interactivity ever.
@@ -214,25 +52,23 @@ func ParseCLArgs() CLArgs {
 	return CLArgs{Port: port}
 }
 
-
-func Websockets(l *Lobby, w http.ResponseWriter, r *http.Request) {
-	conn, _ := upgrader.Upgrade(w, r, nil)
-	user := &User{conn: conn, lobby: l}
-	l.connect <- user
-
-	go user.readPlay()
-}
-
 func main() {
 	clargs := ParseCLArgs()
-	lobby := newLobby()
-	go lobby.run()
+	server := newServer()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "index.html")
 	})
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		var lobby *Lobby
+		if len(server.lobbies) == 0 || len(server.lobbies[len(server.lobbies)-1].users) == 2 {
+			lobby = newLobby()
+			server.lobbies = append(server.lobbies, lobby)
+			go lobby.run()
+		} else {
+			lobby = server.lobbies[len(server.lobbies)-1]
+		}
 		Websockets(lobby, w, r)
 	})
 
@@ -240,5 +76,5 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	log.Println("Listening on port", *clargs.Port)
-	http.ListenAndServe(fmt.Sprintf(":%v", *clargs.Port), nil)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", *clargs.Port), nil))
 }
