@@ -1,6 +1,5 @@
 package main
 
-import "log"
 // The Game
 type Game struct {
 	boardPos map[int]bool 
@@ -63,10 +62,4 @@ type Win struct {
 	Position int
 	PlayerNumber int
 	Key string
-}
-
-func (l *Lobby) endGame(user *User, key string) {
-	log.Println("Match Finished! Player", l.users[user], "won!")
-	res := Win{user.lastMark().Position, l.users[user], key}
-	l.writeToAll(Message{"win", res})
 }
