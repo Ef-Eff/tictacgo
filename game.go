@@ -57,9 +57,3 @@ func (g *Game) play(user *User) string {
 
 	return ""
 }
-
-type Win struct {
-	Position int
-	PlayerNumber int
-	Key string
-}

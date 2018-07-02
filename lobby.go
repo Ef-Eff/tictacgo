@@ -35,6 +35,12 @@ func (l *Lobby) writeToAll(m Message) {
 	}
 }
 
+type Win struct {
+	Position int
+	PlayerNumber int
+	Key string
+}
+
 func (l *Lobby) endGame(user *User, key string) {
 	log.Println("Match Finished! Player", l.users[user], "won!")
 
