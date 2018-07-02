@@ -1,10 +1,10 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
-	"flag"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -12,7 +12,7 @@ import (
 
 var (
 	upgrader = websocket.Upgrader{}
-	mutex = sync.Mutex{}
+	mutex    = sync.Mutex{}
 )
 
 const (
@@ -20,14 +20,14 @@ const (
 )
 
 type Server struct {
-	lobbies map[int]*Lobby
-	lastLobby int
+	lobbies     map[int]*Lobby
+	lastLobby   int
 	removeLobby chan int
 }
 
 func newServer() *Server {
 	return &Server{
-		lobbies: make(map[int]*Lobby),
+		lobbies:     make(map[int]*Lobby),
 		removeLobby: make(chan int),
 	}
 }
@@ -35,7 +35,7 @@ func newServer() *Server {
 func (s *Server) read() {
 	for {
 		select {
-		case lobbyNum := <- s.removeLobby:
+		case lobbyNum := <-s.removeLobby:
 			log.Println("Removing", lobbyNum)
 			delete(s.lobbies, lobbyNum)
 		}
@@ -49,23 +49,17 @@ type Message struct {
 	Data interface{}
 }
 
-// This is the only message format the client is sending (for now)
-// I want the array of keys to calculate the score, then the position to disable it
-type Mark struct {
-	Keys 		 []string `json:"keys"`
-	Position int  		`json:"position"`
-}
-
 func RunServer(server *Server, w http.ResponseWriter, r *http.Request) {
 	var lobby *Lobby
 	if server.lobbies[server.lastLobby] == nil || len(server.lobbies[server.lastLobby].users) == 2 {
-		// Im not sure this is legit use of a mutex. 
+		// Im not sure this is legit use of a mutex.
 		// I basically just want to make sure the number is being incremented and the lobby is being created one at a time
 		// Hopefully this works. I doubt it would be easy for a collision to happen anyway.
 		mutex.Lock()
 		server.lastLobby++
 		lobby = newLobby(server)
 		mutex.Unlock()
+
 		server.lobbies[server.lastLobby] = lobby
 		log.Println("Starting lobby", lobby.lobbyNum)
 		go lobby.run()
@@ -100,7 +94,7 @@ func main() {
 		http.ServeFile(w, r, "index.html")
 	})
 
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r* http.Request) {
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		RunServer(server, w, r)
 	})
 

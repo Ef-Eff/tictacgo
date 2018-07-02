@@ -1,9 +1,9 @@
 package main
 
 import (
-	"net/http"
 	"encoding/json"
 	"log"
+	"net/http"
 
 	"github.com/gorilla/websocket"
 )
@@ -15,7 +15,7 @@ type User struct {
 }
 
 func (u User) lastMark() Mark {
-	return u.data[len(u.data) - 1]
+	return u.data[len(u.data)-1]
 }
 
 // Simple json marshalling of a generic message
@@ -57,7 +57,6 @@ func (user *User) readPlay() {
 		user.lobby.broadcast <- user
 	}
 }
-
 
 func Websockets(l *Lobby, w http.ResponseWriter, r *http.Request) {
 	conn, _ := upgrader.Upgrade(w, r, nil)
