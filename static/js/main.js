@@ -6,6 +6,7 @@ $(() => {
   const $circle = $("<span class='nought'></span>");
   const $cross = $("<span class='cross'><span></span><span></span></span>");
   const $loader = $("span#loader");
+  const $shitTalk = $("h3#shitTalk");
   const $info = $("h3#info");
 
   const players = {
@@ -34,41 +35,46 @@ $(() => {
   // no fucking idea
   function start() {
     $loader.remove();
-    $info.text("Connected")
+    $info.text("Connected");
+
     $("div>div").click(sendMark).hover(function(){
       $(this).append(players[player.number].chip.clone().addClass("hover"));
     }, function() {
       $(this).empty();
     });
-    $("h3#shitTalk").text(["Your turn", "Opponents turn"][player.number-1])
+
+    $shitTalk.text(["Your turn", "Opponents turn"][player.number-1])
     $("div.off").toggleClass("off");
   }
   
-  function mark(msg) {
+  function mark(msg, bool) {
     console.log(msg);
     const $boardPos = $(`div>div[data-pos="${msg.Position}"]`);
     $boardPos.off().append(players[msg.PlayerNumber].chip.clone());
-    $("h3#shitTalk").text(["Opponents turn", "Your turn"][Math.abs(msg.PlayerNumber - player.number)])
+    if (!bool) $shitTalk.text(["Opponents turn", "Your turn"][Math.abs(msg.PlayerNumber - player.number)])
   }
   
   function win(msg) {
-    mark(msg)
+    mark(msg, true)
     $("div>div").off();
     const { color, target, css } = players[msg.PlayerNumber];
-    $(`div>div[data-keys*="${msg.Key}"]>${target}`).css(css, color);
+    const positions = `div>div[data-pos="${msg.WinPos[0]}"]>${target}, div>div[data-pos="${msg.WinPos[1]}"]>${target}, div>div[data-pos="${msg.WinPos[2]}"]>${target}`
+    $(positions).css(css, color);
     // I think that the below code makes it so that the UI updates before the alert, if my JS knowledge is good that is.
     // Im sure I was getting the alert popping up before the js could update the view, now it doesnt
-    $("h3#shitTalk").text(msg.PlayerNumber === player.number ? "You won!": "Ur shit");
-    $("h3#info").text("Refresh the page to start a new game.");
-    setTimeout(() => {
-      console.log(msg.PlayerNumber === player.number ? "You won!": "Ur shit");
-    }, 0);
+    $shitTalk.text(msg.PlayerNumber === player.number ? "You won!": "Ur shit");
   }
   
-  // :thinking: maybe later
-  // function lose() {
-  
-  // }
+  function draw(msg) {
+    mark(msg, true);
+    $("div>div").off();
+    $shitTalk.text("Draw! Nobody wins! !!!11!one1!");
+  }
+
+  function winbydc() {
+    $("div>div").off();
+    $shitTalk.text("The other player disconnected.");
+  }
 
   function error(errMessage) {
     alert(errMessage);
@@ -79,18 +85,14 @@ $(() => {
     start,
     mark,
     win,
-    // lose,
+    draw,
+    winbydc,
     error,
   };
 
   function sendMark() {
     $boardPos = $(this);
-    const message = {
-      Position: parseInt($boardPos.attr("data-pos")), 
-      Keys: $boardPos.attr("data-keys").split(" ") 
-    };
-    console.log("Sending play:", message);
-    ws.send(JSON.stringify(message));
+    ws.send(parseInt($boardPos.attr("data-pos")));
   }
 
   ws.onmessage = function(event) {
@@ -99,6 +101,6 @@ $(() => {
   }
 
   ws.onclose = function(event) {
-    // alert("Server closed. Refresh to reconnect");
+    $info.text("Refresh the page to start a new game.");
   }
 })

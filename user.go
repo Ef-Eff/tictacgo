@@ -4,17 +4,18 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-
+	"strconv"
+	
 	"github.com/gorilla/websocket"
 )
 
 type User struct {
 	conn  *websocket.Conn
-	data  []Mark
+	data  []int
 	lobby *Lobby
 }
 
-func (u User) lastMark() Mark {
+func (u User) lastPlayedPos() int {
 	return u.data[len(u.data)-1]
 }
 
@@ -34,8 +35,9 @@ func (user *User) readPlay() {
 		user.conn.Close()
 	}()
 	for {
-		_, msg, err := user.conn.ReadMessage()
+		_, bytes, err := user.conn.ReadMessage()
 
+		// This error returns when the user has disconnected
 		if err != nil {
 			log.Println(err)
 			break
@@ -46,15 +48,15 @@ func (user *User) readPlay() {
 			continue
 		}
 
-		var m Mark
-		if err := json.Unmarshal(msg, &m); err != nil {
-			user.sendMessage(Message{"error", "Something went wrong, shithead"})
-			log.Fatal(err)
+		if pos, err := strconv.Atoi(string(bytes)); err == nil {
+			user.data = append(user.data, pos)
+
+			user.lobby.broadcast <- user
+			continue
 		}
-
-		user.data = append(user.data, m)
-
-		user.lobby.broadcast <- user
+		
+		log.Println(err)
+		user.sendMessage(Message{"error", "You aren't sending the right data for some reason, shithead."})
 	}
 }
 
