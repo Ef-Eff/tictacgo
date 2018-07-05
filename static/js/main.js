@@ -8,6 +8,7 @@ $(() => {
   const $loader = $("span#loader");
   const $shitTalk = $("h3#shitTalk");
   const $info = $("h3#info");
+  const title = document.title;
 
   const players = {
     1: {
@@ -30,6 +31,7 @@ $(() => {
     player = players[number];
     console.log(`Welcome! You are now player ${number}`);
     $("#player").text(`Player ${number}`).css("color", player.color);
+    document.title = title + " - Waiting";
   }
 
   // no fucking idea
@@ -42,7 +44,7 @@ $(() => {
     }, function() {
       $(this).empty();
     });
-
+    document.title = title + " - " + ["Your turn", "Opponents turn"][player.number-1];
     $shitTalk.text(["Your turn", "Opponents turn"][player.number-1])
     $("div.off").toggleClass("off");
   }
@@ -50,8 +52,11 @@ $(() => {
   function mark(msg, bool) {
     console.log(msg);
     const $boardPos = $(`div>div[data-pos="${msg.Position}"]`);
-    $boardPos.off().append(players[msg.PlayerNumber].chip.clone());
-    if (!bool) $shitTalk.text(["Opponents turn", "Your turn"][Math.abs(msg.PlayerNumber - player.number)])
+    $boardPos.off().empty().append(players[msg.PlayerNumber].chip.clone());
+    if (!bool) {
+      $shitTalk.text(["Opponents turn", "Your turn"][Math.abs(msg.PlayerNumber - player.number)])
+      document.title = title + " - " + ["Opponents turn", "Your turn"][Math.abs(msg.PlayerNumber - player.number)];
+    }
   }
   
   function win(msg) {
@@ -63,12 +68,14 @@ $(() => {
     // I think that the below code makes it so that the UI updates before the alert, if my JS knowledge is good that is.
     // Im sure I was getting the alert popping up before the js could update the view, now it doesnt
     $shitTalk.text(msg.PlayerNumber === player.number ? "You won!": "Ur shit");
+    document.title = title + " - " + (msg.PlayerNumber === player.number ? "You won!": "Ur shit");
   }
   
   function draw(msg) {
     mark(msg, true);
     $("div>div").off();
     $shitTalk.text("Draw! Nobody wins! !!!11!one1!");
+    document.title = title + " - Draw"
   }
 
   function winbydc() {
@@ -101,6 +108,7 @@ $(() => {
   }
 
   ws.onclose = function(event) {
+    $loader.remove();
     $info.text("Refresh the page to start a new game.");
   }
 })
