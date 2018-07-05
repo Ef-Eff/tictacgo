@@ -1,0 +1,1 @@
+web: go run *.go -p $PORT
