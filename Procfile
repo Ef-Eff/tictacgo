@@ -1,1 +1,1 @@
-web: go run *.go -p $PORT
+web: TicTacGo -p $PORT
