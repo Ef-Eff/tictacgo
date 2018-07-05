@@ -3,7 +3,7 @@ package main
 var boardPosKeys = map[int][]string{
 	0: {"h1", "v1", "d1"}, 1: {"h1", "v2"}, 2: {"h1", "v3", "d2"},
 	3: {"h2", "v1"}, 4: {"h2", "v2", "d1", "d2"}, 5: {"h2", "v3"},
-	6: {"h3", "v1", "d2"}, 7: {"h3", "v2"}, 8: {"h2", "v3", "d1"},
+	6: {"h3", "v1", "d2"}, 7: {"h3", "v2"}, 8: {"h3", "v3", "d1"},
 }
 
 var winConditions = map[string][]int{
@@ -65,7 +65,7 @@ func (g *Game) flipTurn() int {
 
 func (g *Game) play(user *User) []int {
 	g.counter++
-
+	
 	diff := g.flipTurn()
 
 	pos := user.lastPlayedPos()
