@@ -20,27 +20,6 @@ type Game struct {
 	scores   map[string]int
 }
 
-func (l *Lobby) newGame() {
-	game := &Game{
-		boardPos: make(map[int]bool, 9),
-		turn:     1,
-		counter:  0,
-		scores: map[string]int{
-			"h1": 0, "h2": 0, "h3": 0,
-			"v1": 0, "v2": 0, "v3": 0,
-			"d1": 0, "d2": 0,
-		},
-	}
-	
-	for i, _ := range game.boardPos {
-		game.boardPos[i] = true
-	}
-
-	l.writeToAll(Message{Type: "start"})
-
-	l.game = game
-}
-
 func (g *Game) changeScores(pos, diff int) (positions []int) {
 	for _, key := range boardPosKeys[pos] {
 		if g.scores[key] += diff; g.counter > 4 && g.scores[key] == 3*diff {
@@ -65,7 +44,7 @@ func (g *Game) flipTurn() int {
 
 func (g *Game) play(user *User) []int {
 	g.counter++
-	
+
 	diff := g.flipTurn()
 
 	pos := user.lastPlayedPos()

@@ -1,10 +1,10 @@
 package main
 
 import (
-	"sync"
-	"net/http"
 	"log"
-	
+	"net/http"
+	"sync"
+
 	"github.com/gorilla/websocket"
 )
 
@@ -30,19 +30,27 @@ func (s *Server) read() {
 	for {
 		select {
 		case lobbyNum := <-s.removeLobby:
-			log.Println("Removing lobby", lobbyNum)
+			log.Println("Removing lobby:", lobbyNum)
 			s.lobbies[lobbyNum].shutdown()
 			delete(s.lobbies, lobbyNum)
 		}
 	}
 }
 
+func newLobby(s *Server) *Lobby {
+	return &Lobby{
+		users:      make(map[*User]int, 2),
+		connect:    make(chan *User, 1),
+		broadcast:  make(chan *User, 1),
+		disconnect: make(chan *User, 1),
+		server:     s,
+		lobbyNum:   s.lastLobby,
+	}
+}
+
 func RunServer(server *Server, w http.ResponseWriter, r *http.Request) {
 	var lobby *Lobby
 	if server.lobbies[server.lastLobby] == nil || len(server.lobbies[server.lastLobby].users) == 2 {
-		// Im not sure this is legit use of a mutex.
-		// I basically just want to make sure the number is being incremented and the lobby is being created one at a time
-		// Hopefully this works. I doubt it would be easy for a collision to happen anyway.
 		mutex.Lock()
 		server.lastLobby++
 		lobby = newLobby(server)

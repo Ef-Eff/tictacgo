@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	
+
 	"github.com/gorilla/websocket"
 )
 
@@ -19,7 +19,6 @@ func (u User) lastPlayedPos() int {
 	return u.data[len(u.data)-1]
 }
 
-// Simple json marshalling of a generic message
 func (user *User) sendMessage(m Message) {
 	msg, _ := json.Marshal(m)
 
@@ -54,16 +53,17 @@ func (user *User) readPlay() {
 			user.lobby.broadcast <- user
 			continue
 		}
-		
+
 		log.Println(err)
-		user.sendMessage(Message{"error", "You aren't sending the right data for some reason, shithead."})
+		user.sendMessage(Message{"error", "The data being sent is incorrect."})
 	}
 }
 
-func Websockets(l *Lobby, w http.ResponseWriter, r *http.Request) {
+// Upgrades the connection to websockets and initializes the user
+func Websockets(lobby *Lobby, w http.ResponseWriter, r *http.Request) {
 	conn, _ := upgrader.Upgrade(w, r, nil)
-	user := &User{conn: conn, lobby: l}
-	l.connect <- user
+	user := &User{conn: conn, lobby: lobby}
+	lobby.connect <- user
 
 	go user.readPlay()
 }

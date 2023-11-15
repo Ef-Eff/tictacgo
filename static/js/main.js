@@ -1,14 +1,52 @@
+/**
+ * @typedef {0|1|2|3|4|5|6|7|8} BoardNumbers
+ * 
+ * @typedef {{
+ *    1: {
+ *      number: 1;
+ *      chip: any;
+ *      color: "red";
+ *      css: "border-color";
+ *      target: "span.nought"
+ *    };
+ *    2: {
+ *      number: 2;
+ *      chip: any;
+ *      color: "blue";
+ *      css: "background-color";
+ *      target: "span.cross>span";
+ *    };
+ *  }} Players
+ * 
+ * @typedef {Players[1]|Players[2]} Player
+ * 
+ * @typedef {"welcome"|"start"|"mark"|"win"|"draw"|"winbydc"|"error"} MessageType
+ * 
+ * @typedef {{
+ *    PlayerNumber: 1|2;
+ *    WinPos: [BoardNumbers, BoardNumbers, BoardNumbers];
+ *    Position: BoardNumbers;
+ * }} WinMessage
+ * 
+ * @typedef {{
+ *    Type: MessageType;
+ *    Data: any;
+ * }} Message
+*/
+
 $(() => {
   const ws = new WebSocket("ws://" + document.location.host + "/ws");
 
+  /** @type {Player} */
   let player;
 
   const $circle = $("<span class='nought'></span>");
   const $cross = $("<span class='cross'><span></span><span></span></span>");
   const $loader = $("span#loader");
-  const $shitTalk = $("h3#shitTalk");
-  const $info = $("h3#info");
+  const $topText = $("h3#top-text");
+  const $infoText = $("h3#info-text");
 
+  /** @type {Players} */
   const players = {
     1: {
       number: 1,
@@ -32,10 +70,9 @@ $(() => {
     $("#player").text(`Player ${number}`).css("color", player.color);
   }
 
-  // no fucking idea
   function start() {
     $loader.remove();
-    $info.text("Connected");
+    $infoText.text("Connected");
 
     $("div>div").click(sendMark).hover(function(){
       $(this).append(players[player.number].chip.clone().addClass("hover"));
@@ -43,17 +80,19 @@ $(() => {
       $(this).empty();
     });
 
-    $shitTalk.text(["Your turn", "Opponents turn"][player.number-1])
+    $topText.text(["Your turn", "Opponents turn"][player.number-1])
     $("div.off").toggleClass("off");
   }
   
   function mark(msg, bool) {
-    console.log(msg);
     const $boardPos = $(`div>div[data-pos="${msg.Position}"]`);
     $boardPos.off().append(players[msg.PlayerNumber].chip.clone());
-    if (!bool) $shitTalk.text(["Opponents turn", "Your turn"][Math.abs(msg.PlayerNumber - player.number)])
+    if (!bool) $topText.text(["Opponents turn", "Your turn"][Math.abs(msg.PlayerNumber - player.number)])
   }
   
+  /**
+   * @param {WinMessage} msg
+   */
   function win(msg) {
     mark(msg, true)
     $("div>div").off();
@@ -62,18 +101,18 @@ $(() => {
     $(positions).css(css, color);
     // I think that the below code makes it so that the UI updates before the alert, if my JS knowledge is good that is.
     // Im sure I was getting the alert popping up before the js could update the view, now it doesnt
-    $shitTalk.text(msg.PlayerNumber === player.number ? "You won!": "Ur shit");
+    $topText.text(msg.PlayerNumber === player.number ? "You won!": "You lost.");
   }
   
   function draw(msg) {
     mark(msg, true);
     $("div>div").off();
-    $shitTalk.text("Draw! Nobody wins! !!!11!one1!");
+    $topText.text("Draw!");
   }
 
   function winbydc() {
     $("div>div").off();
-    $shitTalk.text("The other player disconnected.");
+    $topText.text("The other player disconnected.");
   }
 
   function error(errMessage) {
@@ -95,12 +134,14 @@ $(() => {
     ws.send(parseInt($boardPos.attr("data-pos")));
   }
 
+  /** @param {MessageEvent<Message>} event */
   ws.onmessage = function(event) {
+    /** @type {Message} */
     const data = JSON.parse(event.data);
     actions[data.Type](data.Data);
   }
 
-  ws.onclose = function(event) {
-    $info.text("Refresh the page to start a new game.");
+  ws.onclose = function() {
+    $infoText.text("Refresh the page to start a new game.");
   }
 })

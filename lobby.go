@@ -18,15 +18,10 @@ type Lobby struct {
 	lobbyNum   int
 }
 
-func newLobby(s *Server) *Lobby {
-	return &Lobby{
-		users:      make(map[*User]int, 2),
-		connect:    make(chan *User, 1),
-		broadcast:  make(chan *User, 1),
-		disconnect: make(chan *User, 1),
-		server:     s,
-		lobbyNum:   s.lastLobby,
-	}
+type Win struct {
+	Position     int
+	PlayerNumber int
+	WinPos       []int
 }
 
 func (l *Lobby) writeToAll(m Message) {
@@ -35,12 +30,6 @@ func (l *Lobby) writeToAll(m Message) {
 	for user, _ := range l.users {
 		user.conn.WriteMessage(websocket.TextMessage, msg)
 	}
-}
-
-type Win struct {
-	Position     int
-	PlayerNumber int
-	WinPos       []int
 }
 
 func (l *Lobby) endGame(user *User, positions []int) {
@@ -52,6 +41,27 @@ func (l *Lobby) endGame(user *User, positions []int) {
 
 func (l *Lobby) deleteSelf() {
 	l.server.removeLobby <- l.lobbyNum
+}
+
+func (l *Lobby) newGame() {
+	game := &Game{
+		boardPos: make(map[int]bool, 9),
+		turn:     1,
+		counter:  0,
+		scores: map[string]int{
+			"h1": 0, "h2": 0, "h3": 0,
+			"v1": 0, "v2": 0, "v3": 0,
+			"d1": 0, "d2": 0,
+		},
+	}
+
+	for i := range game.boardPos {
+		game.boardPos[i] = true
+	}
+
+	l.writeToAll(Message{Type: "start"})
+
+	l.game = game
 }
 
 func (l *Lobby) run() {
@@ -82,7 +92,9 @@ func (l *Lobby) run() {
 
 			res := map[string]int{"Position": user.lastPlayedPos(), "PlayerNumber": l.users[user]}
 			l.writeToAll(Message{mType, res})
-			if mType == "draw" { return }
+			if mType == "draw" {
+				return
+			}
 		case user := <-l.disconnect:
 			delete(l.users, user)
 
@@ -96,7 +108,7 @@ func (l *Lobby) run() {
 }
 
 func (l *Lobby) shutdown() {
-	for user, _ := range l.users {
+	for user := range l.users {
 		user.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(1000, "The lobby is shutting down."))
 	}
 }
