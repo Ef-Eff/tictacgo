@@ -6,15 +6,27 @@ import (
 	"net/http"
 )
 
+const (
+	WINBYDC MessageType = "winbydc"
+	DRAW    MessageType = "draw"
+	MARK    MessageType = "mark"
+	WELCOME MessageType = "welcome"
+	WIN     MessageType = "win"
+	ERROR   MessageType = "error"
+	START   MessageType = "start"
+)
+
+type MessageType string
+
 // All messages sent from the server are in this generic format
 type Message struct {
-	Type string
+	Type MessageType
 	Data interface{}
 }
 
 func main() {
-	clargs := parseCLArgs()
-	server := newServer()
+	clargs := ParseCLArgs()
+	server := NewServer()
 	go server.read()
 
 	// Thanks to stackoverflow user RayfenWindspear for bellow

@@ -19,7 +19,7 @@ type Server struct {
 	removeLobby chan int
 }
 
-func newServer() *Server {
+func NewServer() *Server {
 	return &Server{
 		lobbies:     make(map[int]*Lobby),
 		removeLobby: make(chan int),

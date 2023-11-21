@@ -43,7 +43,7 @@ func (user *User) readPlay() {
 		}
 
 		if user.lobby.users[user] != user.lobby.game.turn {
-			user.sendMessage(Message{"error", "Not your turn, shithead."})
+			user.sendMessage(Message{ERROR, "Not your turn."})
 			continue
 		}
 
@@ -55,7 +55,7 @@ func (user *User) readPlay() {
 		}
 
 		log.Println(err)
-		user.sendMessage(Message{"error", "The data being sent is incorrect."})
+		user.sendMessage(Message{ERROR, "The data being sent is invalid."})
 	}
 }
 

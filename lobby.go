@@ -7,7 +7,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// The "hub" from the gorilla websocket chat example, ish
 type Lobby struct {
 	users      map[*User]int
 	connect    chan *User
@@ -36,7 +35,7 @@ func (l *Lobby) endGame(user *User, positions []int) {
 	log.Println("Match Finished! Player", l.users[user], "won!")
 
 	res := Win{user.lastPlayedPos(), l.users[user], positions}
-	l.writeToAll(Message{"win", res})
+	l.writeToAll(Message{WIN, res})
 }
 
 func (l *Lobby) deleteSelf() {
@@ -59,7 +58,7 @@ func (l *Lobby) newGame() {
 		game.boardPos[i] = true
 	}
 
-	l.writeToAll(Message{Type: "start"})
+	l.writeToAll(Message{Type: START})
 
 	l.game = game
 }
@@ -71,7 +70,7 @@ func (l *Lobby) run() {
 		case user := <-l.connect:
 			l.users[user] = len(l.users) + 1
 
-			user.sendMessage(Message{"welcome", l.users[user]})
+			user.sendMessage(Message{WELCOME, l.users[user]})
 			log.Println("A user has connected")
 
 			if len(l.users) == 2 {
@@ -85,14 +84,14 @@ func (l *Lobby) run() {
 				return
 			}
 
-			mType := "mark"
+			mType := MARK
 			if l.game.counter == 9 {
-				mType = "draw"
+				mType = DRAW
 			}
 
 			res := map[string]int{"Position": user.lastPlayedPos(), "PlayerNumber": l.users[user]}
 			l.writeToAll(Message{mType, res})
-			if mType == "draw" {
+			if mType == DRAW {
 				return
 			}
 		case user := <-l.disconnect:
@@ -100,7 +99,7 @@ func (l *Lobby) run() {
 
 			if l.game != nil {
 				log.Println("A user disconnected during a match.")
-				l.writeToAll(Message{Type: "winbydc"})
+				l.writeToAll(Message{Type: WINBYDC})
 				return
 			}
 		}

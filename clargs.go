@@ -11,7 +11,7 @@ type CLArgs struct {
 	Port *int
 }
 
-func parseCLArgs() CLArgs {
+func ParseCLArgs() CLArgs {
 	port := flag.Int("port", defaultPort, portMessage)
 	flag.IntVar(port, "p", defaultPort, portMessage)
 	flag.Parse()
