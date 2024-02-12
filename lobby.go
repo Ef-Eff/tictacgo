@@ -26,7 +26,7 @@ type Win struct {
 func (l *Lobby) writeToAll(m Message) {
 	msg, _ := json.Marshal(m)
 
-	for user, _ := range l.users {
+	for user := range l.users {
 		user.conn.WriteMessage(websocket.TextMessage, msg)
 	}
 }
@@ -63,6 +63,7 @@ func (l *Lobby) newGame() {
 	l.game = game
 }
 
+// Split into seperate functions for each action for clarity?
 func (l *Lobby) run() {
 	defer l.deleteSelf()
 	for {
