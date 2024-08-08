@@ -63,7 +63,6 @@ func (l *Lobby) newGame() {
 	l.game = game
 }
 
-// Split into seperate functions for each action for clarity?
 func (l *Lobby) run() {
 	defer l.deleteSelf()
 	for {

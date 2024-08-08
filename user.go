@@ -59,7 +59,6 @@ func (user *User) readPlay() {
 	}
 }
 
-// Upgrades the connection to websockets and initializes the user
 func Websockets(lobby *Lobby, w http.ResponseWriter, r *http.Request) {
 	conn, _ := upgrader.Upgrade(w, r, nil)
 	user := &User{conn: conn, lobby: lobby}

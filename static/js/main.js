@@ -109,8 +109,6 @@ $(() => {
     const { color, target, css } = players[msg.PlayerNumber];
     const positions = `div>div[data-pos="${msg.WinPos[0]}"]>${target}, div>div[data-pos="${msg.WinPos[1]}"]>${target}, div>div[data-pos="${msg.WinPos[2]}"]>${target}`;
     $(positions).css(css, color);
-    // I think that the below code makes it so that the UI updates before the alert, if my JS knowledge is good that is.
-    // Im sure I was getting the alert popping up before the js could update the view, now it doesnt
     $topText.text(
       msg.PlayerNumber === player.number ? 'You won!' : 'You lost.'
     );

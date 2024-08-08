@@ -29,8 +29,6 @@ func (g *Game) changeScores(pos, diff int) (positions []int) {
 	return
 }
 
-// Decides whose turn it is
-// returns an int based on the player for the purpose of altering the games score
 func (g *Game) flipTurn() int {
 	switch g.turn {
 	case 1:

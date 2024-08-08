@@ -11,7 +11,6 @@ func main() {
 	server := NewServer()
 	go server.read()
 
-	// Thanks to stackoverflow user RayfenWindspear for bellow
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
