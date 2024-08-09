@@ -23,7 +23,7 @@ func main() {
 		RunServer(server, w, r)
 	})
 
-	port, envSet := os.LookupEnv("SERVER_PORT")
+	port, envSet := os.LookupEnv("PORT")
 
 	if envSet == false {
 		port = strconv.Itoa(*clargs.Port)
