@@ -70,6 +70,16 @@ $(() => {
     },
   };
 
+  const actions = {
+    welcome,
+    start,
+    mark,
+    win,
+    draw,
+    winbydc,
+    error,
+  };
+
   /** @param {1|2} number */
   function welcome(number) {
     player = players[number];
@@ -140,16 +150,6 @@ $(() => {
     alert(errMessage);
   }
 
-  const actions = {
-    welcome,
-    start,
-    mark,
-    win,
-    draw,
-    winbydc,
-    error,
-  };
-
   function sendMark() {
     ws.send(parseInt($(this).attr('data-pos')));
   }
@@ -161,6 +161,7 @@ $(() => {
   };
 
   ws.onclose = function () {
+    $('div>div').off();
     $infoText.text('Refresh the page to start a new game.');
   };
 });
