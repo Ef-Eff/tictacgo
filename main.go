@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 )
 
 func main() {
@@ -21,6 +23,12 @@ func main() {
 		RunServer(server, w, r)
 	})
 
-	log.Println("Listening on port", *clargs.Port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", *clargs.Port), nil))
+	port, envSet := os.LookupEnv("SERVER_PORT")
+
+	if envSet == false {
+		port = strconv.Itoa(*clargs.Port)
+	}
+
+	log.Println("Listening on port", port)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), nil))
 }
