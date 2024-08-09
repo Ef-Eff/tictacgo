@@ -38,7 +38,9 @@
  */
 
 $(() => {
-  const ws = new WebSocket('ws://' + document.location.host + '/ws');
+  const ws = document.location.host.includes('localhost:')
+    ? new WebSocket(`ws://${document.location.host}/ws`)
+    : new WebSocket(`wss://${document.location.host}/ws`);
 
   /** @type {Player} */
   let player;
@@ -98,7 +100,11 @@ $(() => {
     const $boardPos = $(`div>div[data-pos="${msg.Position}"]`);
     $boardPos.off().append(players[msg.PlayerNumber].chip.clone());
     if (!bool) {
-      $topText.text(['Opponents turn', 'Your turn'][Math.abs(msg.PlayerNumber - player.number)]);
+      $topText.text(
+        ['Opponents turn', 'Your turn'][
+          Math.abs(msg.PlayerNumber - player.number)
+        ]
+      );
     }
   }
 
