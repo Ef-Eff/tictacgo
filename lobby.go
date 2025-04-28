@@ -31,10 +31,10 @@ func (l *Lobby) writeToAll(m Message) {
 	}
 }
 
-func (l *Lobby) endGame(user *User, positions []int) {
+func (l *Lobby) endGame(user *User) {
 	log.Println("Match Finished! Player", l.users[user], "won!")
 
-	res := Win{user.lastPlayedPos(), l.users[user], positions}
+	res := Win{user.lastPlayedPos(), l.users[user], l.game.winningPos}
 	l.writeToAll(Message{WIN, res})
 }
 
@@ -42,25 +42,9 @@ func (l *Lobby) deleteSelf() {
 	l.server.removeLobby <- l.lobbyNum
 }
 
-func (l *Lobby) newGame() {
-	game := &Game{
-		boardPos: make(map[int]bool, 9),
-		turn:     1,
-		counter:  0,
-		scores: map[string]int{
-			"h1": 0, "h2": 0, "h3": 0,
-			"v1": 0, "v2": 0, "v3": 0,
-			"d1": 0, "d2": 0,
-		},
-	}
-
-	for i := range game.boardPos {
-		game.boardPos[i] = true
-	}
-
+func (l *Lobby) startNewGame() {
+	l.game = NewGame()
 	l.writeToAll(Message{Type: START})
-
-	l.game = game
 }
 
 func (l *Lobby) run() {
@@ -75,12 +59,12 @@ func (l *Lobby) run() {
 
 			if len(l.users) == 2 {
 				log.Println("Match found!")
-				l.newGame()
+				l.startNewGame()
 			}
 		case user := <-l.broadcast:
-			positions := l.game.play(user)
-			if positions != nil {
-				l.endGame(user, positions)
+			l.game.play(user)
+			if l.game.winningPos != nil {
+				l.endGame(user)
 				return
 			}
 

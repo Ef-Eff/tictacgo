@@ -14,19 +14,37 @@ var winConditions = map[string][]int{
 
 // The Game
 type Game struct {
-	boardPos map[int]bool
-	turn     int
-	counter  int
-	scores   map[string]int
+	boardPos   map[int]bool
+	turn       int
+	counter    int
+	winningPos []int
+	scores     map[string]int
 }
 
-func (g *Game) changeScores(pos, diff int) (positions []int) {
+func NewGame() *Game {
+	return &Game{
+		boardPos: map[int]bool{
+			0: true, 1: true, 2: true,
+			3: true, 4: true, 5: true,
+			6: true, 7: true, 8: true,
+		},
+		turn:       1,
+		counter:    0,
+		winningPos: nil,
+		scores: map[string]int{
+			"h1": 0, "h2": 0, "h3": 0,
+			"v1": 0, "v2": 0, "v3": 0,
+			"d1": 0, "d2": 0,
+		},
+	}
+}
+
+func (g *Game) changeScores(pos, diff int) {
 	for _, key := range boardPosKeys[pos] {
 		if g.scores[key] += diff; g.counter > 4 && g.scores[key] == 3*diff {
-			positions = winConditions[key]
+			g.winningPos = winConditions[key]
 		}
 	}
-	return
 }
 
 func (g *Game) flipTurn() int {
@@ -40,13 +58,12 @@ func (g *Game) flipTurn() int {
 	}
 }
 
-func (g *Game) play(user *User) []int {
-	g.counter++
+func (g *Game) play(user *User) {
+	pos := user.lastPlayedPos()
 
+	g.boardPos[pos] = false
+	g.counter++
 	diff := g.flipTurn()
 
-	pos := user.lastPlayedPos()
-	g.boardPos[pos] = false
-
-	return g.changeScores(pos, diff)
+	g.changeScores(pos, diff)
 }
